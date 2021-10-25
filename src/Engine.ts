@@ -29,12 +29,34 @@ export default class Engine {
     updated: new Map<typeof Component, Component[]>(),
     deleted: new Map<typeof Component, Component[]>(),
   }
+  private lastTime = performance.now()
+  private nextTime = this.lastTime
+
+  public get deltaTime() {
+    return this.nextTime - this.lastTime
+  }
 
   /** Enables a system in this engine */
   public addSystem(type: typeof System) {
     const system = new type(this)
     system.start()
     this.systems.push(system)
+  }
+
+  /** Disables a system and asks it to clean up after itself */
+  public removeSystem(type: typeof System) {
+    const index = this.systems.findIndex(sys => sys.constructor === type)
+    const system = this.systems[index]
+
+    system.stop()
+
+    this.systems.splice(index, 1)
+  }
+
+  /** Reloads a system by removing and re-adding it */
+  public restartSystem(type: typeof System) {
+    this.removeSystem(type)
+    this.addSystem(type)
   }
 
   /** Creates an entity and performs all necessary bookkeeping */
@@ -224,6 +246,8 @@ export default class Engine {
 
   /** Runs on every engine tick */
   public update() {
+    this.nextTime = performance.now()
+
     this.systems.forEach((system) => system.update())
 
     // Shift changes forward
@@ -235,6 +259,8 @@ export default class Engine {
       updated: new Map<typeof Component, Component[]>(),
       deleted: new Map<typeof Component, Component[]>(),
     }
+
+    this.lastTime = this.nextTime
   }
 
   /** A fast and safe way to add a component to a map */

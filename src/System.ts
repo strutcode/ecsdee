@@ -10,4 +10,7 @@ export default class System {
 
   /** Called on every engine tick */
   public update() {}
+
+  /** Called before this system is torn down */
+  public stop() {}
 }
