@@ -8,4 +8,6 @@ export default class System {
     start(): void;
     /** Called on every engine tick */
     update(): void;
+    /** Called before this system is torn down */
+    stop(): void;
 }

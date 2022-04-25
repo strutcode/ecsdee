@@ -9,5 +9,7 @@ export default class System {
     start() { }
     /** Called on every engine tick */
     update() { }
+    /** Called before this system is torn down */
+    stop() { }
 }
 //# sourceMappingURL=System.js.map

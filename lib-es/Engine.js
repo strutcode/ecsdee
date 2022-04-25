@@ -1,4 +1,4 @@
-import Entity from './Entity';
+import Entity from "./Entity";
 let gid = 1;
 /** The core class. Responsible for linking together Entities, Components and Systems. */
 export default class Engine {
@@ -15,11 +15,28 @@ export default class Engine {
         updated: new Map(),
         deleted: new Map(),
     };
+    lastTime = performance.now();
+    nextTime = this.lastTime;
+    get deltaTime() {
+        return this.nextTime - this.lastTime;
+    }
     /** Enables a system in this engine */
     addSystem(type) {
         const system = new type(this);
         system.start();
         this.systems.push(system);
+    }
+    /** Disables a system and asks it to clean up after itself */
+    removeSystem(type) {
+        const index = this.systems.findIndex((sys) => sys.constructor === type);
+        const system = this.systems[index];
+        system.stop();
+        this.systems.splice(index, 1);
+    }
+    /** Reloads a system by removing and re-adding it */
+    restartSystem(type) {
+        this.removeSystem(type);
+        this.addSystem(type);
     }
     createEntity(options) {
         const entity = new Entity();
@@ -31,7 +48,7 @@ export default class Engine {
         entity.id = normalizedOptions.id ?? gid++;
         // Don't allow entities with the same ID
         if (this.entities.has(entity.id)) {
-            throw new Error('Entity ID collision');
+            throw new Error("Entity ID collision");
         }
         // Record the entity in this engine
         this.entities.set(entity.id, entity);
@@ -139,6 +156,7 @@ export default class Engine {
     }
     /** Runs on every engine tick */
     update() {
+        this.nextTime = performance.now();
         this.systems.forEach((system) => system.update());
         // Shift changes forward
         this.componentChanges = this.nextComponentChanges;
@@ -148,6 +166,7 @@ export default class Engine {
             updated: new Map(),
             deleted: new Map(),
         };
+        this.lastTime = this.nextTime;
     }
     /** A fast and safe way to add a component to a map */
     register(collection, key, value) {
