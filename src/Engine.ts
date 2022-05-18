@@ -150,8 +150,12 @@ export default class Engine {
   }
 
   /** Returns an entity from its ID */
-  public getEntity(id: number) {
-    return this.entities.get(id);
+  public getEntity(id: number | null | undefined) {
+    if (id) {
+      return this.entities.get(id);
+    }
+
+    return undefined;
   }
 
   /** Produces a list of every Component of a type across all entities from the prototype. May be an empty array. */

@@ -31,7 +31,7 @@ export default class Engine {
     /** Returns all entities in this engine */
     getEntities(): Entity[];
     /** Returns an entity from its ID */
-    getEntity(id: number): Entity | undefined;
+    getEntity(id: number | null | undefined): Entity | undefined;
     /** Produces a list of every Component of a type across all entities from the prototype. May be an empty array. */
     getAllComponents<T extends typeof Component>(type: T): InstanceType<T>[];
     /** Gets the first component of this prototype in the engine or undefined if none */
