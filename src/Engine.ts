@@ -45,7 +45,7 @@ export default class Engine {
 
   /** Disables a system and asks it to clean up after itself */
   public removeSystem(type: typeof System) {
-    const index = this.systems.findIndex((sys) => sys.constructor === type);
+    const index = this.systems.findIndex((sys) => sys.constructor.name === type.name);
     const system = this.systems[index];
 
     system.stop();
