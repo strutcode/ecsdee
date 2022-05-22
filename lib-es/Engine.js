@@ -15,14 +15,25 @@ export default class Engine {
         updated: new Map(),
         deleted: new Map(),
     };
+    systemChanges = new Map();
+    activeSystem;
     lastTime = performance.now();
     nextTime = this.lastTime;
     get deltaTime() {
         return this.nextTime - this.lastTime;
     }
     /** Enables a system in this engine */
-    addSystem(type) {
+    addSystem(type, options) {
+        const opts = {
+            existingAsCreated: true,
+            ...options
+        };
         const system = new type(this);
+        if (opts.existingAsCreated) {
+            this.systemChanges.set(type, {
+                created: new Map(this.components)
+            });
+        }
         system.start();
         this.systems.push(system);
     }
@@ -124,6 +135,11 @@ export default class Engine {
     }
     /** Provides an array of created components of a type this tick */
     getCreated(type) {
+        if (this.activeSystem) {
+            const systemChanges = this.systemChanges.get(this.activeSystem)?.created ?? [];
+            const standardChanges = this.componentChanges.created.get(type) ?? [];
+            return [...systemChanges, ...standardChanges];
+        }
         return (this.componentChanges.created.get(type) ?? []);
     }
     /** Provides an array of updated components of a type this tick */
@@ -140,6 +156,12 @@ export default class Engine {
     }
     /** Iterates components of a given type that were created this tick */
     forEachCreated(type, callback) {
+        if (this.activeSystem) {
+            const changes = this.systemChanges.get(this.activeSystem);
+            if (changes) {
+                this.iterate(changes.created.get(type), callback);
+            }
+        }
         this.iterate(this.componentChanges.created.get(type), callback);
     }
     /** Iterates components of a given type that were updated this tick */
@@ -160,7 +182,10 @@ export default class Engine {
     /** Runs on every engine tick */
     update() {
         this.nextTime = performance.now();
-        this.systems.forEach((system) => system.update());
+        this.systems.forEach((system) => {
+            this.activeSystem = system.constructor;
+            system.update();
+        });
         // Shift changes forward
         this.componentChanges = this.nextComponentChanges;
         // Prep for the next set of changes

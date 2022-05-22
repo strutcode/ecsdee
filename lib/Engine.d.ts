@@ -1,6 +1,9 @@
 import Component from "./Component";
 import Entity from "./Entity";
 import System from "./System";
+declare type AddSystemOptions = {
+    existingAsCreated?: boolean;
+};
 declare type CreateEntityOptions = {
     id?: number;
     components?: CreateEntityComponents;
@@ -13,11 +16,13 @@ export default class Engine {
     private systems;
     private nextComponentChanges;
     private componentChanges;
+    private systemChanges;
+    private activeSystem?;
     private lastTime;
     private nextTime;
     get deltaTime(): number;
     /** Enables a system in this engine */
-    addSystem(type: typeof System): void;
+    addSystem(type: typeof System, options?: AddSystemOptions): void;
     /** Disables a system and asks it to clean up after itself */
     removeSystem(type: typeof System): void;
     /** Reloads a system by removing and re-adding it */

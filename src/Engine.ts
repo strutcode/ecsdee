@@ -2,6 +2,14 @@ import Component from "./Component";
 import Entity from "./Entity";
 import System from "./System";
 
+type AddSystemOptions = {
+  existingAsCreated?: boolean;
+};
+
+type SystemChangeSet = {
+  created: Map<typeof Component, Component[]>;
+};
+
 type CreateEntityOptions = {
   id?: number;
   components?: CreateEntityComponents;
@@ -18,7 +26,7 @@ let gid = 1;
 export default class Engine {
   private entities = new Map<number, Entity>();
   private components = new Map<typeof Component, Component[]>();
-  private systems: System[] = [];
+  private systems: System<this>[] = [];
   private nextComponentChanges = {
     created: new Map<typeof Component, Component[]>(),
     updated: new Map<typeof Component, Component[]>(),
@@ -29,6 +37,8 @@ export default class Engine {
     updated: new Map<typeof Component, Component[]>(),
     deleted: new Map<typeof Component, Component[]>(),
   };
+  private systemChanges = new Map<typeof System, SystemChangeSet>();
+  private activeSystem?: typeof System;
   private lastTime = performance.now();
   private nextTime = this.lastTime;
 
@@ -37,9 +47,22 @@ export default class Engine {
   }
 
   /** Enables a system in this engine */
-  public addSystem(type: typeof System) {
+  public addSystem(type: typeof System, options?: AddSystemOptions) {
+    const opts = {
+      existingAsCreated: true,
+      ...options
+    }
+
     const system = new type(this);
+
+    if (opts.existingAsCreated) {
+      this.systemChanges.set(type, {
+        created: new Map(this.components)
+      });
+    }
+
     system.start();
+
     this.systems.push(system);
   }
 
@@ -186,6 +209,13 @@ export default class Engine {
 
   /** Provides an array of created components of a type this tick */
   public getCreated<T extends typeof Component>(type: T): InstanceType<T>[] {
+    if (this.activeSystem) {
+      const systemChanges = this.systemChanges.get(this.activeSystem)?.created ?? [];
+      const standardChanges = this.componentChanges.created.get(type) ?? [];
+
+      return [...systemChanges, ...standardChanges] as InstanceType<T>[];
+    }
+
     return (this.componentChanges.created.get(type) ?? []) as InstanceType<T>[];
   }
 
@@ -212,6 +242,17 @@ export default class Engine {
     type: T,
     callback: (component: InstanceType<T>) => void
   ) {
+    if (this.activeSystem) {
+      const changes = this.systemChanges.get(this.activeSystem)
+
+      if (changes) {
+        this.iterate(
+          changes.created.get(type) as InstanceType<T>[],
+          callback
+        );
+      }
+    }
+
     this.iterate(
       this.componentChanges.created.get(type) as InstanceType<T>[],
       callback
@@ -252,7 +293,10 @@ export default class Engine {
   public update() {
     this.nextTime = performance.now();
 
-    this.systems.forEach((system) => system.update());
+    this.systems.forEach((system) => {
+      this.activeSystem = system.constructor as typeof System;
+      system.update()
+    });
 
     // Shift changes forward
     this.componentChanges = this.nextComponentChanges;
