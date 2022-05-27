@@ -1,6 +1,6 @@
 import Engine from './Engine';
 /** A single logical unit of work which processes data contained in Components */
-export default class System<T extends Engine> {
+export default class System<T extends Engine = Engine> {
     protected engine: T;
     /** For engine use only */
     constructor(engine: T);

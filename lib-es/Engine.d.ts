@@ -57,6 +57,9 @@ export default class Engine {
     forEachUpdated<T extends typeof Component>(type: T, callback: (component: InstanceType<T>) => void): void;
     /** Iterates components of a given type that were deleted this tick */
     forEachDeleted<T extends typeof Component>(type: T, callback: (component: InstanceType<T>) => void): void;
+    addComponent<T extends typeof Component>(entity: Entity, type: T, props?: Record<string, any>): void;
+    addComponents(entity: Entity, components: CreateEntityComponents): void;
+    removeComponents<T extends typeof Component>(entity: Entity, type: T): void;
     /** Starts all systems and runs them continuously */
     start(): void;
     /** Runs on every engine tick */

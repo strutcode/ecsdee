@@ -67,25 +67,7 @@ export default class Engine {
         normalizedOptions.components?.forEach((opts) => {
             const TypeConstructor = Array.isArray(opts) ? opts[0] : opts;
             const props = Array.isArray(opts) ? opts[1] : {};
-            // Construct the component
-            const comp = new TypeConstructor(entity);
-            // Set initial data
-            Object.assign(comp, props);
-            // Set up proxy to watch for updates
-            const proxy = new Proxy(comp, {
-                // Hook all set events for object properties
-                set: (t, p, v, r) => {
-                    // Record the change
-                    this.register(this.nextComponentChanges.updated, TypeConstructor, proxy);
-                    // Transparent pass through
-                    return Reflect.set(t, p, v, r);
-                },
-            });
-            // Register the component
-            this.register(entity.components, TypeConstructor, proxy);
-            this.register(this.components, TypeConstructor, proxy);
-            // Record the created event
-            this.register(this.nextComponentChanges.created, TypeConstructor, proxy);
+            this.addComponent(entity, TypeConstructor, props);
         });
         return entity;
     }
@@ -171,6 +153,45 @@ export default class Engine {
     /** Iterates components of a given type that were deleted this tick */
     forEachDeleted(type, callback) {
         this.iterate(this.componentChanges.deleted.get(type), callback);
+    }
+    addComponent(entity, type, props = {}) {
+        // Construct the component
+        const comp = new type(entity);
+        // Set initial data
+        Object.assign(comp, props);
+        // Set up proxy to watch for updates
+        const proxy = new Proxy(comp, {
+            // Hook all set events for object properties
+            set: (t, p, v, r) => {
+                // Record the change
+                this.register(this.nextComponentChanges.updated, type, proxy);
+                // Transparent pass through
+                return Reflect.set(t, p, v, r);
+            },
+        });
+        // Register the component
+        this.register(entity.components, type, proxy);
+        this.register(this.components, type, proxy);
+        // Record the created event
+        this.register(this.nextComponentChanges.created, type, proxy);
+    }
+    addComponents(entity, components) {
+        components.forEach(entry => {
+            if (Array.isArray(entry)) {
+                this.addComponent(entity, entry[0], entry[1]);
+            }
+            else {
+                this.addComponent(entity, entry);
+            }
+        });
+    }
+    removeComponents(entity, type) {
+        entity.getComponents(type).forEach((comp) => {
+            // Record the deleted event
+            this.register(this.nextComponentChanges.deleted, type, comp);
+            // Unregister the component
+            this.unregister(this.components, type, comp);
+        });
     }
     /** Starts all systems and runs them continuously */
     start() {
